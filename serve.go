@@ -10,18 +10,26 @@ import (
 )
 
 // Serve serves HTTP requests using handler or http.DefaultServeMux if handler is nil.
-func Serve(handler http.Handler) func() {
+func Serve(handler http.Handler, opts ...Option) func() {
 	var h = handler
 	if h == nil {
 		h = http.DefaultServeMux
 	}
+
+	options := &options{}
+
+	for _, opt := range opts {
+		opt(options)
+	}
+
+	options.setDefaults()
 
 	var prefix = js.Global().Get("wasmhttp").Get("path").String()
 	for strings.HasSuffix(prefix, "/") {
 		prefix = strings.TrimSuffix(prefix, "/")
 	}
 
-	if prefix != "" {
+	if prefix != "" && *options.stripPrefix {
 		var mux = http.NewServeMux()
 		mux.Handle(prefix+"/", http.StripPrefix(prefix, h))
 		h = mux
